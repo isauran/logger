@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// logger := logger.NewLogger(os.Stdout, slogger.WithJSON(true))
+// logger := logger.NewLogger(os.Stdout, logger.WithJSON(true))
 func NewLogger(w io.Writer, options ...Option) *slog.Logger {
 	opts := LoggerOptions(options...)
 

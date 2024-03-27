@@ -13,7 +13,7 @@ func (l logFunc) Log(keyvals ...interface{}) error {
 	return nil
 }
 
-// logger := logger.NewGoKitLogger(os.Stdout, gokitlogger.WithJSON(true))
+// logger := logger.NewGoKitLogger(os.Stdout, logger.WithJSON(true))
 func NewGoKitLogger(w io.Writer, options ...Option) gokitlog.Logger {
 	opts := LoggerOptions(options...)
 	logger := NewLogger(w, options...)
