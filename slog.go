@@ -8,7 +8,21 @@ import (
 	"time"
 )
 
-// logger := logger.NewLogger(os.Stdout, logger.WithJSON(true))
+var source *slog.Source
+
+func Caller(file string, line int) {
+	source = &slog.Source{
+		File: file,
+		Line: line,
+	}
+}
+
+func ResetCaller() {
+	source = nil
+}
+
+// logger.NewLogger(os.Stdout, logger.WithJSON(true))
+// slog.Info("init", "logger", "log/slog", "format", "json")
 func NewLogger(w io.Writer, options ...Option) *slog.Logger {
 	opts := LoggerOptions(options...)
 
@@ -31,6 +45,10 @@ func NewLogger(w io.Writer, options ...Option) *slog.Logger {
 		Level:     level,
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.SourceKey {
+				if source != nil {
+					return slog.String("caller", fmt.Sprintf("%s:%d", filepath.Base(source.File), source.Line))
+				}
+
 				s, _ := a.Value.Any().(*slog.Source)
 				if s != nil {
 					return slog.String("caller", fmt.Sprintf("%s:%d", filepath.Base(s.File), s.Line))
