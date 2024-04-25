@@ -10,14 +10,16 @@ import (
 
 var source *slog.Source
 
-func Caller(file string, line int) {
-	source = &slog.Source{
-		File: file,
-		Line: line,
+func CallerSource(file string, line int) {
+	if file != "" {
+		source = &slog.Source{
+			File: file,
+			Line: line,
+		}
 	}
 }
 
-func ResetCaller() {
+func ResetCallerSource() {
 	source = nil
 }
 

@@ -10,10 +10,14 @@ import (
 
 type logFunc func(msg string, keysAndValues ...interface{})
 
+func gokitlogCaller() {
+	_, file, line, _ := runtime.Caller(2)
+	CallerSource(file, line)
+}
+
 func (l logFunc) Log(keyvals ...interface{}) error {
-	defer ResetCaller()
-	_, file, line, _ := runtime.Caller(1)
-	Caller(file, line)
+	defer ResetCallerSource()
+	gokitlogCaller()
 	l("", keyvals...)
 
 	return nil

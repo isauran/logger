@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"os"
 
 	"github.com/isauran/logger"
+	gormlogger "gorm.io/gorm/logger"
 )
 
 func main() {
@@ -16,6 +18,10 @@ func main() {
 	gokitlogJSON.Log("msg", "init", "logger", "go-kit/log", "format", "json")
 	// {"time":"2024-04-23T15:48:36+05:00","level":"INFO","caller":"main.go:19","msg":"init","logger":"go-kit/log","format":"json"}
 
+	gormlogJSON := logger.NewGormLogger(gormlogger.Config{LogLevel: gormlogger.Info})
+	gormlogJSON.Info(context.Background(), "init", "logger", "gorm.io/gorm/logger", "format", "text")
+	// {"time":"2024-04-26T03:16:39+05:00","level":"INFO","caller":"asm_amd64.s:1695","msg":"init","logger":"gorm.io/gorm/logger","format":"text"}
+
 	logger.NewLogger(os.Stdout)
 	slog.Info("init", "logger", "log/slog", "format", "text")
 	// time=2024-03-27T15:05:29+05:00 level=INFO caller=main.go:15 msg=init logger=log/slog format=text
@@ -23,4 +29,8 @@ func main() {
 	gokitlog := logger.NewGoKitLogger("info")
 	gokitlog.Log("msg", "init", "logger", "go-kit/log", "format", "text")
 	// time=2024-04-23T15:48:36+05:00 level=INFO caller=main.go:23 msg=init logger=go-kit/log format=text
+
+	gormlog := logger.NewGormLogger(gormlogger.Config{LogLevel: gormlogger.Info})
+	gormlog.Info(context.Background(), "init", "logger", "gorm.io/gorm/logger", "format", "text")
+	// time=2024-04-26T03:16:39+05:00 level=INFO caller=asm_amd64.s:1695 msg=init logger=gorm.io/gorm/logger format=text
 }
