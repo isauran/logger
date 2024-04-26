@@ -50,48 +50,36 @@ func (l *gormLogger) LogMode(level logger.LogLevel) logger.Interface {
 // Info print info
 func (l *gormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Info {
-		defer ResetCallerSource()
-		DefaultCallerSource()
 		fileLine := strings.Split(utils.FileWithLineNum(), ":")
-		if len(fileLine) == 2 {
-			file := fileLine[0]
-			line, _ := strconv.Atoi(fileLine[1])
-			CallerSource(file, line)
-		}
+		file := fileLine[0]
+		line, _ := strconv.Atoi(fileLine[1])
+		ctx = SourceContext(ctx, &slog.Source{File: file, Line: line})
 
-		slog.Info(fmt.Sprintf(msg, data...))
+		slog.InfoContext(ctx, fmt.Sprintf(msg, data...))
 	}
 }
 
 // Warn print warn messages
 func (l *gormLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Warn {
-		defer ResetCallerSource()
-		DefaultCallerSource()
 		fileLine := strings.Split(utils.FileWithLineNum(), ":")
-		if len(fileLine) == 2 {
-			file := fileLine[0]
-			line, _ := strconv.Atoi(fileLine[1])
-			CallerSource(file, line)
-		}
+		file := fileLine[0]
+		line, _ := strconv.Atoi(fileLine[1])
+		ctx = SourceContext(ctx, &slog.Source{File: file, Line: line})
 
-		slog.Warn(fmt.Sprintf(msg, data...))
+		slog.WarnContext(ctx, fmt.Sprintf(msg, data...))
 	}
 }
 
 // Error print error messages
 func (l *gormLogger) Error(ctx context.Context, msg string, data ...interface{}) {
 	if l.LogLevel >= logger.Error {
-		defer ResetCallerSource()
-		DefaultCallerSource()
 		fileLine := strings.Split(utils.FileWithLineNum(), ":")
-		if len(fileLine) == 2 {
-			file := fileLine[0]
-			line, _ := strconv.Atoi(fileLine[1])
-			CallerSource(file, line)
-		}
+		file := fileLine[0]
+		line, _ := strconv.Atoi(fileLine[1])
+		ctx = SourceContext(ctx, &slog.Source{File: file, Line: line})
 
-		slog.Error(fmt.Sprintf(msg, data...))
+		slog.ErrorContext(ctx, fmt.Sprintf(msg, data...))
 	}
 }
 
@@ -99,14 +87,10 @@ func (l *gormLogger) Error(ctx context.Context, msg string, data ...interface{})
 //
 //nolint:cyclop
 func (l *gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
-	defer ResetCallerSource()
-	DefaultCallerSource()
 	fileLine := strings.Split(utils.FileWithLineNum(), ":")
-	if len(fileLine) == 2 {
-		file := fileLine[0]
-		line, _ := strconv.Atoi(fileLine[1])
-		CallerSource(file, line)
-	}
+	file := fileLine[0]
+	line, _ := strconv.Atoi(fileLine[1])
+	ctx = SourceContext(ctx, &slog.Source{File: file, Line: line})
 
 	if l.LogLevel <= logger.Silent {
 		return
@@ -117,24 +101,24 @@ func (l *gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (stri
 	case err != nil && l.LogLevel >= logger.Error && (!errors.Is(err, logger.ErrRecordNotFound) || !l.IgnoreRecordNotFoundError):
 		sql, rows := fc()
 		if rows == -1 {
-			slog.Error(err.Error(), "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "sql", sql)
+			slog.ErrorContext(ctx, err.Error(), "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "sql", sql)
 		} else {
-			slog.Error(err.Error(), "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "rows", rows, "sql", sql)
+			slog.ErrorContext(ctx, err.Error(), "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "rows", rows, "sql", sql)
 		}
 	case elapsed > l.SlowThreshold && l.SlowThreshold != 0 && l.LogLevel >= logger.Warn:
 		sql, rows := fc()
 		slowLog := fmt.Sprintf("SLOW SQL >= %v", l.SlowThreshold)
 		if rows == -1 {
-			slog.Warn(slowLog, "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "sql", sql)
+			slog.WarnContext(ctx, slowLog, "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "sql", sql)
 		} else {
-			slog.Warn(slowLog, "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "rows", rows, "sql", sql)
+			slog.WarnContext(ctx, slowLog, "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "rows", rows, "sql", sql)
 		}
 	case l.LogLevel == logger.Info:
 		sql, rows := fc()
 		if rows == -1 {
-			slog.Info("", "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "sql", sql)
+			slog.InfoContext(ctx, "", "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "sql", sql)
 		} else {
-			slog.Info("", "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "rows", rows, "sql", sql)
+			slog.InfoContext(ctx, "", "ms", fmt.Sprintf("%.3f", float64(elapsed.Nanoseconds())/1e6), "rows", rows, "sql", sql)
 		}
 	}
 }

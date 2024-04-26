@@ -1,18 +1,18 @@
 package logger
 
 import (
+	"context"
 	"log/slog"
 	"strings"
 
 	gokitlog "github.com/go-kit/log"
 )
 
-type logFunc func(msg string, keysAndValues ...interface{})
+type logFunc func(ctx context.Context, msg string, keysAndValues ...interface{})
 
 func (l logFunc) Log(keyvals ...interface{}) error {
-	defer ResetCallerSource()
-	DefaultCallerSource()
-	l("", keyvals...)
+	ctx := SourceContext(context.Background(), CallerSource(2))
+	l(ctx, "", keyvals...)
 
 	return nil
 }
@@ -23,15 +23,15 @@ func NewGoKitLogger(level string) gokitlog.Logger {
 	var logFunc logFunc
 	switch {
 	case strings.EqualFold(level, LevelDebug):
-		logFunc = slog.Default().Debug
+		logFunc = slog.Default().DebugContext
 	case strings.EqualFold(level, LevelInfo):
-		logFunc = slog.Default().Info
+		logFunc = slog.Default().InfoContext
 	case strings.EqualFold(level, LevelWarn):
-		logFunc = slog.Default().Warn
+		logFunc = slog.Default().WarnContext
 	case strings.EqualFold(level, LevelError):
-		logFunc = slog.Default().Error
+		logFunc = slog.Default().ErrorContext
 	default:
-		logFunc = slog.Default().Info
+		logFunc = slog.Default().InfoContext
 	}
 
 	return logFunc
