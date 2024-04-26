@@ -53,7 +53,7 @@ func (l *gormLogger) Info(ctx context.Context, msg string, data ...interface{}) 
 	if l.LogLevel >= logger.Info {
 		defer ResetCallerSource()
 		DefaultCallerSource()
-		fileLine := filepath.Base(utils.FileWithLineNum())
+		fileLine := utils.FileWithLineNum()
 		parts := strings.Split(fileLine, ":")
 		if len(parts) == 2 {
 			file := parts[0]
@@ -94,7 +94,7 @@ func (l *gormLogger) Error(ctx context.Context, msg string, data ...interface{})
 			line, _ := strconv.Atoi(parts[1])
 			CallerSource(file, line)
 		}
-		
+
 		slog.Error(fmt.Sprintf(msg, data...))
 	}
 }
@@ -112,7 +112,7 @@ func (l *gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (stri
 		line, _ := strconv.Atoi(parts[1])
 		CallerSource(file, line)
 	}
-	
+
 	if l.LogLevel <= logger.Silent {
 		return
 	}
