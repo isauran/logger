@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -17,6 +18,11 @@ func CallerSource(file string, line int) {
 			Line: line,
 		}
 	}
+}
+
+func DefaultCallerSource() {
+	_, file, line, _ := runtime.Caller(2)
+	CallerSource(file, line)
 }
 
 func ResetCallerSource() {
