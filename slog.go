@@ -54,12 +54,12 @@ func NewLogger(w io.Writer, options ...Option) *slog.Logger {
 		ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
 			if a.Key == slog.SourceKey {
 				if source != nil {
-					return slog.String("caller", fmt.Sprintf("%s:%d", filepath.Base(source.File), source.Line))
+					return slog.String("caller", fmt.Sprintf("%s/%s:%d", filepath.Base(filepath.Dir(source.File)), filepath.Base(source.File), source.Line))
 				}
 
 				s, _ := a.Value.Any().(*slog.Source)
 				if s != nil {
-					return slog.String("caller", fmt.Sprintf("%s:%d", filepath.Base(s.File), s.Line))
+					return slog.String("caller", fmt.Sprintf("%s/%s:%d", filepath.Base(filepath.Dir(s.File)), filepath.Base(s.File), s.Line))
 				}
 			}
 			if a.Key == slog.TimeKey {

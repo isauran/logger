@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -53,11 +52,10 @@ func (l *gormLogger) Info(ctx context.Context, msg string, data ...interface{}) 
 	if l.LogLevel >= logger.Info {
 		defer ResetCallerSource()
 		DefaultCallerSource()
-		fileLine := filepath.Base(utils.FileWithLineNum())
-		parts := strings.Split(fileLine, ":")
-		if len(parts) == 2 {
-			file := parts[0]
-			line, _ := strconv.Atoi(parts[1])
+		fileLine := strings.Split(utils.FileWithLineNum(), ":")
+		if len(fileLine) == 2 {
+			file := fileLine[0]
+			line, _ := strconv.Atoi(fileLine[1])
 			CallerSource(file, line)
 		}
 
@@ -70,11 +68,10 @@ func (l *gormLogger) Warn(ctx context.Context, msg string, data ...interface{}) 
 	if l.LogLevel >= logger.Warn {
 		defer ResetCallerSource()
 		DefaultCallerSource()
-		fileLine := filepath.Base(utils.FileWithLineNum())
-		parts := strings.Split(fileLine, ":")
-		if len(parts) == 2 {
-			file := parts[0]
-			line, _ := strconv.Atoi(parts[1])
+		fileLine := strings.Split(utils.FileWithLineNum(), ":")
+		if len(fileLine) == 2 {
+			file := fileLine[0]
+			line, _ := strconv.Atoi(fileLine[1])
 			CallerSource(file, line)
 		}
 
@@ -87,14 +84,13 @@ func (l *gormLogger) Error(ctx context.Context, msg string, data ...interface{})
 	if l.LogLevel >= logger.Error {
 		defer ResetCallerSource()
 		DefaultCallerSource()
-		fileLine := filepath.Base(utils.FileWithLineNum())
-		parts := strings.Split(fileLine, ":")
-		if len(parts) == 2 {
-			file := parts[0]
-			line, _ := strconv.Atoi(parts[1])
+		fileLine := strings.Split(utils.FileWithLineNum(), ":")
+		if len(fileLine) == 2 {
+			file := fileLine[0]
+			line, _ := strconv.Atoi(fileLine[1])
 			CallerSource(file, line)
 		}
-		
+
 		slog.Error(fmt.Sprintf(msg, data...))
 	}
 }
@@ -105,14 +101,13 @@ func (l *gormLogger) Error(ctx context.Context, msg string, data ...interface{})
 func (l *gormLogger) Trace(ctx context.Context, begin time.Time, fc func() (string, int64), err error) {
 	defer ResetCallerSource()
 	DefaultCallerSource()
-	fileLine := filepath.Base(utils.FileWithLineNum())
-	parts := strings.Split(fileLine, ":")
-	if len(parts) == 2 {
-		file := parts[0]
-		line, _ := strconv.Atoi(parts[1])
+	fileLine := strings.Split(utils.FileWithLineNum(), ":")
+	if len(fileLine) == 2 {
+		file := fileLine[0]
+		line, _ := strconv.Atoi(fileLine[1])
 		CallerSource(file, line)
 	}
-	
+
 	if l.LogLevel <= logger.Silent {
 		return
 	}
