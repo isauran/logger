@@ -16,7 +16,7 @@ import (
 var gormSourceDir string
 
 func init() {
-	_, file, _, _ := runtime.Caller(0)
+	_, file, _, _ := runtime.Caller(1)
 	// compatible solution to get gorm source directory with various operating systems
 	gormSourceDir = sourceDir(file)
 }

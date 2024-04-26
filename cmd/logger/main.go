@@ -19,7 +19,7 @@ func main() {
 
 	gormlogJSON := logger.NewGormLogger("info")
 	gormlogJSON.Info(context.Background(), "init", "logger", "gorm.io/gorm/logger", "format", "json")
-	// {"time":"2024-04-26T06:51:57+05:00","level":"INFO","caller":"asm_amd64.s:1695","msg":"init","logger":"gorm.io/gorm/logger","format":"json"}
+	// {"time":"2024-04-26T07:13:41+05:00","level":"INFO","caller":"main.go:21","msg":"init","logger":"gorm.io/gorm/logger","format":"json"}
 
 	logger.NewLogger(os.Stdout)
 	slog.Info("init", "logger", "log/slog", "format", "text")
@@ -31,5 +31,5 @@ func main() {
 
 	gormlog := logger.NewGormLogger("info")
 	gormlog.Info(context.Background(), "init", "logger", "gorm.io/gorm/logger", "format", "text")
-	// time=2024-04-26T03:16:39+05:00 level=INFO caller=asm_amd64.s:1695 msg=init logger=gorm.io/gorm/logger format=text
+	// time=2024-04-26T07:13:41+05:00 level=INFO caller=main.go:33 msg=init logger=gorm.io/gorm/logger format=text
 }
