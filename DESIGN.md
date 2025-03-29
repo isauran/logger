@@ -1,304 +1,193 @@
-# Alternative Logger Design Approaches
+# Logger Library Design
 
-This document explores different design approaches for the slog-based unified logger, focusing on initialization patterns and configuration options.
+## Overview
 
-## 1. Builder Pattern Approach
+This logger library provides a flexible, high-performance structured logging solution for Go applications. It builds upon Go's standard `log/slog` package, extending it with additional features like custom log levels, context awareness, enhanced error handling, file rotation, asynchronous logging, and adapters for popular Go libraries.
 
-Instead of using functional options, we could use a builder pattern for more fluent configuration:
+## Design Principles
+
+1. **Performance-first approach**: Minimize allocations and optimize for high-throughput applications
+2. **Structured logging**: All logs are structured for better parsing and analysis
+3. **Extensibility**: Supports custom handlers, formatters, and levels
+4. **Context awareness**: Leverages Go's context system for better tracing and metadata
+5. **Adapters for ecosystem**: Seamless integration with popular libraries (GORM, Go-kit, etc.)
+6. **Configuration flexibility**: Support for file, environment, and code-based configuration
+
+## Architecture
+
+The library is organized around several key components:
+
+### Core Components
+
+1. **Handler**: Enhanced implementation of `slog.Handler` with additional features:
+   - Buffer pooling for improved performance
+   - Global attributes and groups
+   - Customizable formatting
+   - Context awareness
+   - Error handling with stack traces
+
+2. **Level System**: Extended level support beyond standard slog levels:
+   - Custom named levels
+   - Level registry for organization-specific levels
+   - Color and icon support for terminal output
+   - Level-based filtering
+
+3. **Field System**: Type-safe field creation with automatic inference:
+   - Structured field creation
+   - Automatic type handling
+   - Group support
+   - Error chain extraction
+   - Stack trace generation
+
+4. **Configuration**: Flexible configuration from multiple sources:
+   - YAML/JSON file support
+   - Environment variables
+   - Programmatic configuration
+   - Default sensible settings
+
+### Handler Chain
+
+Handlers can be composed in a chain to provide multiple features:
+
+```
+Input → ContextHandler → ErrorHandler → AsyncHandler → SamplingHandler → FileHandler → Output
+```
+
+Each handler in the chain adds specific functionality:
+
+- **ContextHandler**: Extracts and adds context values to logs
+- **ErrorHandler**: Enhances error logs with stack traces and cause chains
+- **AsyncHandler**: Moves logging to background goroutines
+- **SamplingHandler**: Reduces log volume for repetitive messages
+- **FileHandler**: Manages log file output and rotation
+
+### Builder Pattern
+
+A fluent builder API allows for intuitive logger construction:
 
 ```go
-type LoggerBuilder struct {
-    writer io.Writer
-    config Config
-}
-
-type Config struct {
-    JSON       bool
-    Level      slog.Level
-    TimeFormat string
-    AddSource  bool
-    BufferPool bool
-    AddCaller  bool
-    // Additional configuration options
-}
-
-// Usage example:
-logger := NewLoggerBuilder(os.Stdout).
+logger := logger.NewBuilder().
     WithJSON().
-    WithLevel(slog.LevelDebug).
-    WithTimeFormat(time.RFC3339).
-    WithSourceInfo().
-    WithBufferPool().
+    WithLevel(slog.LevelInfo).
+    WithSource().
+    WithFile("app.log", 100, 7).
+    WithAsync(1000, 2).
     Build()
 ```
 
-### Benefits
-- Fluent, chainable API
-- Clear configuration visualization
-- Type-safe configuration
-- Easy to extend with new options
-- Self-documenting code
+## Adapters
 
-### Drawbacks
-- More boilerplate code
-- Slightly more complex implementation
-- Need to maintain builder state
+The library provides adapters for popular Go libraries:
 
-## 2. Configuration-Based Approach
+1. **GORM**: Adapter for GORM's logger interface
+2. **Go-kit**: Adapter for Go-kit's logging system
+3. **Standard Logger**: Adapter for the standard library's log.Logger
 
-Use configuration files (YAML/JSON) for logger setup:
+## Performance Considerations
 
-```yaml
-logger:
-  format: json
-  level: info
-  time_format: "2006-01-02T15:04:05Z07:00"
-  source:
-    enabled: true
-    short_path: true
-  buffer:
-    enabled: true
-    size: 4096
-    pool_size: 32
-  handlers:
-    - type: file
-      path: /var/log/app.log
-      rotate:
-        max_size: 100
-        max_age: 7
-        max_backups: 5
-    - type: stdout
-      format: text
-```
+Several techniques are used to optimize performance:
+
+1. **Buffer Pooling**: Reuses buffers to reduce garbage collection pressure
+2. **Sampling**: Reduces log volume for repetitive messages
+3. **Asynchronous Logging**: Moves logging off the critical path
+4. **Minimal Allocations**: Careful design to minimize heap allocations
+5. **Efficient Formatting**: Optimized text and JSON formatting
+
+## Usage Patterns
+
+### Basic Usage
 
 ```go
-type LoggerConfig struct {
-    Format     string         `yaml:"format"`
-    Level      string         `yaml:"level"`
-    TimeFormat string         `yaml:"time_format"`
-    Source     SourceConfig   `yaml:"source"`
-    Buffer     BufferConfig   `yaml:"buffer"`
-    Handlers   []HandlerConfig `yaml:"handlers"`
-}
-
-logger, err := NewLoggerFromConfig("config.yaml")
-```
-
-### Benefits
-- External configuration
-- Easy to change settings without recompiling
-- Support for multiple output handlers
-- Environment-specific configurations
-- Clearer separation of concerns
-
-### Drawbacks
-- Runtime configuration parsing
-- Potential configuration errors
-- More complex error handling
-
-## 3. Context-Based Logger
-
-Focus on context propagation and enrichment:
-
-```go
-type ContextLogger struct {
-    base   *slog.Logger
-    fields []slog.Attr
-}
-
-// Usage example:
-logger := NewContextLogger(os.Stdout)
-
-// Add request-specific context
-reqLogger := logger.With(
-    slog.String("request_id", id),
-    slog.String("user_id", userID),
+import (
+    "github.com/isauran/logger"
+    "log/slog"
 )
 
-// Use in handlers
-func Handler(ctx context.Context) {
-    logger := FromContext(ctx)
-    logger.Info("processing request")
+func main() {
+    // Create default logger
+    logger.NewLogger(os.Stdout, logger.WithJSON(true))
+    
+    // Log with standard slog
+    slog.Info("application started", "version", "1.0.0")
 }
 ```
 
-### Benefits
-- Better context propagation
-- Request-scoped logging
-- Easy to add/remove context
-- Clean handler integration
-- Trace correlation support
-
-### Drawbacks
-- Need to manage context properly
-- Potential memory overhead
-- More complex context management
-
-## 4. Async Logger Implementation
-
-Optimize for performance with async logging:
+### Advanced Configuration
 
 ```go
-type AsyncLogger struct {
-    queue  chan *LogEntry
-    done   chan struct{}
-    wg     sync.WaitGroup
-    config AsyncConfig
-}
+import (
+    "github.com/isauran/logger"
+    "github.com/isauran/logger/core/handler"
+    "log/slog"
+    "os"
+    "time"
+)
 
-type AsyncConfig struct {
-    QueueSize    int
-    Workers      int
-    BatchSize    int
-    FlushInterval time.Duration
+func main() {
+    // Create configured handler
+    h, _ := handler.NewBuilder().
+        WithJSON().
+        WithLevel(slog.LevelDebug).
+        WithFile("app.log", 100, 7).
+        WithAsync(1000, 2).
+        WithSampling(time.Second, 10).
+        Build()
+    
+    // Create and set logger
+    logger := slog.New(h)
+    slog.SetDefault(logger)
+    
+    // Log using global slog
+    slog.Info("application started", 
+        "version", "1.0.0",
+        "environment", "production")
 }
-
-// Usage example:
-logger := NewAsyncLogger(AsyncConfig{
-    QueueSize:    1000,
-    Workers:      2,
-    BatchSize:    100,
-    FlushInterval: time.Second,
-})
-defer logger.Close()
 ```
 
-### Benefits
-- Better performance
-- Batched writing
-- Non-blocking logging
-- Controlled resource usage
-- Buffer overflow protection
-
-### Drawbacks
-- Potential log loss on crash
-- More complex shutdown
-- Memory overhead for queue
-- Need for careful tuning
-
-## 5. Interface-First Design
-
-Focus on interfaces for better testing and flexibility:
+### Context-Aware Logging
 
 ```go
-type Logger interface {
-    Debug(msg string, args ...any)
-    Info(msg string, args ...any)
-    Warn(msg string, args ...any)
-    Error(msg string, args ...any)
-    With(args ...any) Logger
+func ProcessRequest(ctx context.Context, req Request) {
+    // Add request ID to context
+    ctx = context.WithValue(ctx, "request_id", req.ID)
+    
+    // Log with context
+    slog.InfoContext(ctx, "processing request", 
+        "method", req.Method,
+        "path", req.Path)
+        
+    // Context ID will be automatically included in log
 }
-
-type Handler interface {
-    Handle(r Record) error
-    WithAttrs(attrs []Attr) Handler
-    WithGroup(name string) Handler
-}
-
-// Implementation can be swapped easily:
-var logger Logger = NewProductionLogger()
-// For tests:
-var logger Logger = NewTestLogger()
 ```
 
-### Benefits
-- Easy to mock for testing
-- Clear contract
-- Simpler integration
-- Easy to extend
-- Better separation of concerns
-
-### Drawbacks
-- More interfaces to maintain
-- Potential interface bloat
-- Additional abstraction layer
-
-## 6. Structured Event Logger
-
-Focus on structured events rather than free-form messages:
+### Error Handling
 
 ```go
-type Event struct {
-    Name    string
-    Level   slog.Level
-    Fields  map[string]interface{}
-    Time    time.Time
+func ProcessFile(path string) error {
+    data, err := os.ReadFile(path)
+    if err != nil {
+        // Log error with stack trace
+        slog.Error("failed to read file", 
+            "path", path,
+            "error", err)
+        return fmt.Errorf("read file %s: %w", path, err)
+    }
+    
+    // Process data...
+    return nil
 }
-
-// Usage example:
-logger.LogEvent(Event{
-    Name:  "UserLogin",
-    Level: slog.LevelInfo,
-    Fields: map[string]interface{}{
-        "user_id": "123",
-        "ip":      "192.168.1.1",
-        "success": true,
-    },
-})
 ```
 
-### Benefits
-- Consistent structured data
-- Better analytics support
-- Clear event semantics
-- Easy to process
-- Strong typing possible
+## Future Work
 
-### Drawbacks
-- More rigid structure
-- More setup required
-- Less flexibility
+1. **Metrics Integration**: Better integration with Prometheus and OpenTelemetry
+2. **More Adapters**: Support for additional logging libraries and frameworks
+3. **Enhanced Web Integration**: Better support for HTTP middleware logging
+4. **Profiling Tools**: Integrated logging performance analysis
+5. **CLI Tools**: Command-line utilities for log analysis and management
 
-## Recommendations
+## References
 
-1. **For Small Projects**
-   - Use the current functional options approach
-   - Keep it simple with direct slog usage
-   - Focus on essential features
-
-2. **For Medium Projects**
-   - Consider the Builder pattern
-   - Add basic context support
-   - Implement simple configuration
-
-3. **For Large Projects**
-   - Use configuration-based approach
-   - Implement async logging
-   - Add full context support
-   - Consider structured events
-
-4. **For High-Performance Requirements**
-   - Implement async logging
-   - Use buffer pools
-   - Consider structured events
-   - Optimize for minimal allocations
-
-5. **For Microservices**
-   - Focus on context propagation
-   - Use structured events
-   - Implement tracing support
-   - Consider distributed logging
-
-## Migration Strategy
-
-When adopting a new design:
-
-1. Create new interfaces/types alongside existing ones
-2. Provide adapters for backward compatibility
-3. Update documentation and examples
-4. Add migration guides
-5. Consider providing migration tools
-6. Plan for gradual adoption
-
-## Conclusion
-
-Each approach has its strengths and ideal use cases. Consider your specific requirements:
-
-- Performance needs
-- Operational complexity
-- Team expertise
-- Project scale
-- Maintenance requirements
-- Integration requirements
-
-Choose the approach that best balances these factors for your specific use case.
+- [Go slog Documentation](https://pkg.go.dev/log/slog)
+- [Structured Logging Best Practices](https://www.honeycomb.io/blog/structured-logging-best-practices)
+- [OpenTelemetry Logging](https://opentelemetry.io/docs/specs/otel/logs/)
